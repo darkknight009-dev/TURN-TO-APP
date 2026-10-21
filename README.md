@@ -10,7 +10,7 @@ PWA Converter is a Next.js app that turns a public deployed web-app URL into a h
 4. Generate a live install route and a ZIP containing the PWA shell, manifest, service worker, and 192px/512px PNG icons.
 5. Open the install route on the device where the app should live. Supported browsers can show the native install prompt; the route also includes an Open site fallback.
 
-The wrapper keeps the target URL as the source of truth and presents it in a responsive iframe. It does not copy or rewrite the target app's assets. If a target site blocks embedding, the generated route exposes a direct Open site action.
+The hosted route keeps the target URL as the source of truth and presents it through an adaptive preview route. That route injects a mobile viewport, overflow-safe styles, scrollable tables/code, and a small fixed-layout fitting pass before the page reaches the PWA frame. It is deliberately best-effort: complex applications that depend on origin-bound cookies, strict CSP, or cross-origin API calls can still require the direct Open site action. The adapter does not copy the target app's assets.
 
 ## Run locally
 

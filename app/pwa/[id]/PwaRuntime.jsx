@@ -1,40 +1,106 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 
-export default function PwaRuntime({ id, appName, targetUrl }) {
+import styles from './PwaRuntime.module.css';
+
+function ArrowUpRightIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 18 18" aria-hidden="true">
+      <path d="M5 13 13 5" />
+      <path d="M7 5h6v6" />
+    </svg>
+  );
+}
+
+function InstallIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 18 18" aria-hidden="true">
+      <path d="M9 2v9" />
+      <path d="m5.5 7.5 3.5 3.5 3.5-3.5" />
+      <path d="M3 13.5v1.25A1.25 1.25 0 0 0 4.25 16h9.5A1.25 1.25 0 0 0 15 14.75V13.5" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 18 18" aria-hidden="true">
+      <path d="m4 9.5 3.2 3.2L14 6" />
+    </svg>
+  );
+}
+
+function getHost(value) {
+  if (!value) return 'live site';
+
+  try {
+    return new URL(value).hostname.replace(/^www\./, '');
+  } catch {
+    return String(value).replace(/^https?:\/\//, '').split('/')[0] || 'live site';
+  }
+}
+
+export default function PwaRuntime({ id, appName, targetUrl, adaptiveUrl }) {
+  const displayName = String(appName || 'Hosted app');
+  const liveUrl = targetUrl || 'about:blank';
+  const adaptiveSource = adaptiveUrl || '';
+  const hasAdaptivePreview = Boolean(adaptiveSource);
   const basePath = useMemo(() => `/pwa/${encodeURIComponent(String(id || ''))}`, [id]);
   const scopePath = `${basePath}/`;
+  const iconUrl = `${basePath}/icon.png?size=192`;
+  const liveHost = useMemo(() => getHost(targetUrl), [targetUrl]);
+  const adaptiveHost = useMemo(() => getHost(adaptiveSource), [adaptiveSource]);
+  const appInitial = displayName.trim().slice(0, 1).toUpperCase() || 'A';
+  const runtimeId = String(id || 'runtime').slice(0, 22);
+  const rootRef = useRef(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [installStatus, setInstallStatus] = useState('checking');
+  const [installHintVisible, setInstallHintVisible] = useState(false);
   const [runtimeMessage, setRuntimeMessage] = useState('');
+  const [previewMode, setPreviewMode] = useState(() => (hasAdaptivePreview ? 'adaptive' : 'original'));
+
+  useEffect(() => {
+    setPreviewMode((current) => (current === 'adaptive' && hasAdaptivePreview ? current : hasAdaptivePreview ? 'adaptive' : 'original'));
+  }, [hasAdaptivePreview]);
 
   useEffect(() => {
     let cancelled = false;
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(`${basePath}/sw.js`, { scope: scopePath }).catch(() => {
-        if (!cancelled) {
-          setRuntimeMessage('The wrapper is still usable, but offline shell caching is unavailable in this browser.');
-        }
-      });
-    } else {
-      setRuntimeMessage('This browser does not support service workers, so install and offline features are unavailable.');
-    }
+    setDeferredPrompt(null);
+    setInstallStatus('checking');
+    setInstallHintVisible(false);
+    setRuntimeMessage('');
 
     const isStandalone =
       window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
     if (isStandalone) setInstallStatus('installed');
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(`${basePath}/sw.js`, { scope: scopePath }).catch(() => {
+        if (!cancelled) {
+          setRuntimeMessage('Install metadata could not be registered here, but preview and live-site access are still available.');
+        }
+      });
+    } else {
+      setRuntimeMessage('This browser does not support service workers. Use the live-site action to continue browsing.');
+    }
 
     const handleBeforeInstallPrompt = (event) => {
       event.preventDefault();
-      setDeferredPrompt(event);
-      setInstallStatus('available');
+      if (!cancelled && !isStandalone) {
+        setDeferredPrompt(event);
+        setInstallStatus('available');
+        setInstallHintVisible(false);
+      }
     };
 
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
       setInstallStatus('installed');
+      setInstallHintVisible(false);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -52,166 +118,374 @@ export default function PwaRuntime({ id, appName, targetUrl }) {
     };
   }, [basePath, scopePath]);
 
+  useLayoutEffect(() => {
+    const scope = rootRef.current;
+    if (!scope) return undefined;
+
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      scope.dataset.motion = 'reduced';
+      return undefined;
+    }
+
+    const hoverCleanups = [];
+    const context = gsap.context(() => {
+      const enterItems = gsap.utils.toArray('[data-pwa-enter]', scope);
+      gsap.fromTo(
+        enterItems,
+        { autoAlpha: 0, y: 18 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          clearProps: 'opacity,transform',
+          duration: 0.78,
+          ease: 'power3.out',
+          stagger: 0.065,
+        },
+      );
+
+      const stage = scope.querySelector('[data-pwa-stage]');
+      if (stage) {
+        gsap.fromTo(
+          stage,
+          { autoAlpha: 0, scale: 0.985, y: 20 },
+          { autoAlpha: 1, scale: 1, y: 0, duration: 1, delay: 0.18, ease: 'power3.out', clearProps: 'opacity,transform' },
+        );
+      }
+    }, scope);
+
+    scope.querySelectorAll('[data-pwa-hover]').forEach((element) => {
+      const xTo = gsap.quickTo(element, 'x', { duration: 0.36, ease: 'power3.out' });
+      const yTo = gsap.quickTo(element, 'y', { duration: 0.36, ease: 'power3.out' });
+
+      const onMove = (event) => {
+        if (event.pointerType && event.pointerType !== 'mouse') return;
+        const bounds = element.getBoundingClientRect();
+        xTo((event.clientX - (bounds.left + bounds.width / 2)) * 0.08);
+        yTo((event.clientY - (bounds.top + bounds.height / 2)) * 0.12);
+      };
+
+      const onLeave = () => {
+        xTo(0);
+        yTo(0);
+      };
+
+      element.addEventListener('pointermove', onMove);
+      element.addEventListener('pointerleave', onLeave);
+      hoverCleanups.push(() => {
+        element.removeEventListener('pointermove', onMove);
+        element.removeEventListener('pointerleave', onLeave);
+      });
+    });
+
+    return () => {
+      hoverCleanups.forEach((cleanup) => cleanup());
+      context.revert();
+    };
+  }, []);
+
   async function handleInstall() {
-    if (!deferredPrompt) return;
+    if (installStatus === 'installed') return;
+
+    if (!deferredPrompt) {
+      setInstallStatus('unavailable');
+      setInstallHintVisible(true);
+      return;
+    }
 
     const promptEvent = deferredPrompt;
     setDeferredPrompt(null);
     try {
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice;
-      setInstallStatus(choice?.outcome === 'accepted' ? 'installed' : 'unavailable');
+      const accepted = choice?.outcome === 'accepted';
+      setInstallStatus(accepted ? 'installed' : 'unavailable');
+      setInstallHintVisible(!accepted);
     } catch {
       setInstallStatus('unavailable');
+      setInstallHintVisible(true);
     }
   }
 
-  const installMessage =
+  const activeMode = previewMode === 'adaptive' && hasAdaptivePreview ? 'adaptive' : 'original';
+  const previewUrl = activeMode === 'adaptive' ? adaptiveSource : liveUrl;
+  const installCopy =
     installStatus === 'checking'
-      ? 'Checking whether this browser can install the app…'
+      ? {
+          title: 'Checking install availability',
+          detail: 'We are checking whether this browser exposes a one-tap install prompt.',
+          short: 'Checking browser support',
+        }
       : installStatus === 'available'
-        ? 'This page is ready to install as an app.'
+        ? {
+            title: 'Ready to install',
+            detail: 'This browser can add the hosted experience to your app library or home screen.',
+            short: 'Install prompt ready',
+          }
         : installStatus === 'installed'
-          ? 'This app is installed in the browser.'
-          : 'Install is not available here yet. Use your browser menu when it offers “Install app”.';
+          ? {
+              title: 'Already installed',
+              detail: 'You are viewing the installed hosted experience in its app window.',
+              short: 'Installed in this browser',
+            }
+          : {
+              title: 'Use your browser menu to install',
+              detail: 'This browser has not exposed a one-tap prompt. Look for “Install app” or “Add to Home Screen”.',
+              short: 'Prompt unavailable here',
+            };
+  const installButtonLabel =
+    installStatus === 'available'
+      ? 'Install app'
+      : installStatus === 'installed'
+        ? 'Installed'
+        : 'Install options';
+  const installProgress =
+    installStatus === 'checking' ? 42 : installStatus === 'available' ? 76 : installStatus === 'installed' ? 100 : 24;
+  const statusOrbClass =
+    installStatus === 'available'
+      ? styles.installOrbReady
+      : installStatus === 'installed'
+        ? styles.installOrbInstalled
+        : installStatus === 'checking'
+          ? styles.installOrbChecking
+          : styles.installOrbUnavailable;
 
   return (
-    <>
-      <main className="pwa-runtime">
-        <header className="pwa-header">
-          <div>
-            <p className="pwa-eyebrow">Progressive Web App</p>
-            <h1>{appName}</h1>
-          </div>
-          <div className="pwa-actions">
-            <button
-              className="pwa-install-button"
-              type="button"
-              onClick={handleInstall}
-              disabled={installStatus !== 'available'}
-            >
-              {installStatus === 'installed' ? 'Installed' : 'Install app'}
-            </button>
-            <a className="pwa-open-link" href={targetUrl} target="_blank" rel="noopener noreferrer">
-              Open site
-            </a>
+    <main ref={rootRef} className={styles.runtime}>
+      <div className={styles.shell}>
+        <header className={styles.topbar} data-pwa-enter>
+          <a className={styles.brand} href="/" aria-label="PWA Converter home">
+            <span className={styles.brandMark}>
+              pwa<span className={styles.brandDot}>.</span>
+            </span>
+            <span className={styles.brandLabel}>hosted experience</span>
+          </a>
+          <div className={styles.topbarMeta} aria-label="Hosted page status">
+            <span className={styles.statusPill}>
+              <span className={styles.statusDot} aria-hidden="true" />
+              Live preview
+            </span>
+            <span className={styles.topbarId}>/{runtimeId}</span>
           </div>
         </header>
 
-        <p className="pwa-status" role="status" aria-live="polite">
-          {installMessage}
-          {runtimeMessage ? ` ${runtimeMessage}` : ''}
-        </p>
+        <section className={styles.hero} aria-labelledby="pwa-runtime-title">
+          <div className={styles.heroGrid}>
+            <div className={styles.identity} data-pwa-enter>
+              <p className={styles.eyebrow}>
+                <span className={styles.eyebrowIndex}>01</span>
+                Progressive web app
+              </p>
 
-        <section className="pwa-frame-card" aria-label="Embedded site">
-          <iframe
-            className="pwa-frame"
-            title={appName}
-            src={targetUrl}
-            loading="eager"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allow="fullscreen; clipboard-read; clipboard-write"
-          />
+              <div className={styles.identityRow}>
+                <div className={styles.appIcon} aria-hidden="true">
+                  <span className={styles.appIconFallback}>{appInitial}</span>
+                  <img src={iconUrl} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />
+                </div>
+                <div className={styles.identityCopy}>
+                  <p className={styles.identityLabel}>A considered way in</p>
+                  <h1 id="pwa-runtime-title">{displayName}</h1>
+                  <p className={styles.identityDescription}>
+                    A polished install surface for <strong>{liveHost}</strong>. Preview the experience here, then open the live site whenever you are ready.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.actionRow}>
+                <button
+                  className={`${styles.primaryAction} ${styles.hoverTarget}`}
+                  type="button"
+                  onClick={handleInstall}
+                  disabled={installStatus === 'installed'}
+                  aria-describedby="install-status"
+                  data-pwa-hover
+                >
+                  {installStatus === 'installed' ? <CheckIcon className={styles.actionIcon} /> : <InstallIcon className={styles.actionIcon} />}
+                  <span>{installButtonLabel}</span>
+                  {installStatus === 'available' && <span className={styles.actionArrow}>↗</span>}
+                </button>
+                <a
+                  className={`${styles.secondaryAction} ${styles.hoverTarget}`}
+                  href={liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-pwa-hover
+                >
+                  <span>Open live site</span>
+                  <ArrowUpRightIcon className={styles.actionIcon} />
+                </a>
+              </div>
+
+              <div className={styles.identityMeta}>
+                <span><span className={styles.metaMark} /> Live URL</span>
+                <span>{liveHost}</span>
+                <span className={styles.metaDivider} />
+                <span>{hasAdaptivePreview ? 'Adaptive route ready' : 'Original route ready'}</span>
+              </div>
+            </div>
+
+            <aside className={styles.installPanel} data-pwa-enter aria-labelledby="install-panel-title">
+              <div className={styles.panelHeader}>
+                <p className={styles.panelKicker}>
+                  <span className={styles.panelDot} aria-hidden="true" />
+                  Install readiness
+                </p>
+                <span className={styles.panelCode}>02 / 03</span>
+              </div>
+
+              <div className={styles.installPanelBody}>
+                <div className={`${styles.installOrb} ${statusOrbClass}`} aria-hidden="true">
+                  {installStatus === 'installed' ? <CheckIcon className={styles.orbIcon} /> : <InstallIcon className={styles.orbIcon} />}
+                </div>
+                <div>
+                  <p className={styles.installLabel}>Browser signal</p>
+                  <h2 id="install-panel-title" className={styles.installTitle}>{installCopy.title}</h2>
+                  <p className={styles.installDetail}>{installCopy.detail}</p>
+                </div>
+              </div>
+
+              <div className={styles.progressTrack} aria-hidden="true">
+                <span style={{ width: `${installProgress}%` }} />
+              </div>
+              <div className={styles.panelFooter}>
+                <span id="install-status" role="status" aria-live="polite">{installCopy.short}</span>
+                <span>{installStatus === 'installed' ? '100%' : 'browser check'}</span>
+              </div>
+
+              {runtimeMessage && <p className={styles.runtimeMessage}>{runtimeMessage}</p>}
+              {installHintVisible && installStatus !== 'installed' && (
+                <p className={styles.installHint}>
+                  Open the browser menu and choose its install or home-screen option when it is available.
+                </p>
+              )}
+            </aside>
+          </div>
         </section>
 
-        <p className="pwa-fallback">
-          If this site blocks embedding or does not load, use{' '}
-          <a href={targetUrl} target="_blank" rel="noopener noreferrer">
-            Open site
-          </a>{' '}
-          to continue in a browser tab.
-        </p>
-        <noscript className="pwa-fallback">Enable JavaScript to register the service worker and use the install button.</noscript>
-      </main>
+        <section className={styles.previewSection} aria-labelledby="preview-title">
+          <div className={styles.previewHeading} data-pwa-enter>
+            <div>
+              <p className={styles.eyebrow}>
+                <span className={styles.eyebrowIndex}>02</span>
+                Preview surface
+              </p>
+              <h2 id="preview-title">See it in context<span className={styles.headingAccent}>.</span></h2>
+            </div>
+            <p className={styles.previewDescription}>
+              The adaptive route adds a real mobile viewport and fits fixed desktop layouts when needed. The original live site stays one click away.
+            </p>
+          </div>
 
-      <style>{`
-        .pwa-runtime {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          width: min(100%, 1280px);
-          min-height: 100vh;
-          margin: 0 auto;
-          padding: clamp(1rem, 3vw, 2rem);
-          color: #e2e8f0;
-          background: radial-gradient(circle at top, #172554 0, #020617 58%);
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
+          <div className={styles.previewWorkspace}>
+            <aside className={styles.previewRail} data-pwa-enter aria-label="Preview controls">
+              <div className={styles.railHeader}>
+                <span className={styles.railKicker}>View source</span>
+                <span className={styles.railIndex}>02.1</span>
+              </div>
 
-        .pwa-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1rem;
-        }
+              <div className={styles.previewTabs} role="tablist" aria-label="Choose preview source">
+                <button
+                  className={styles.previewTab}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMode === 'adaptive'}
+                  aria-controls="pwa-preview-frame"
+                  disabled={!hasAdaptivePreview}
+                  onClick={() => setPreviewMode('adaptive')}
+                >
+                  <span className={styles.tabTopline}>
+                    <span>Adaptive preview</span>
+                    <span className={styles.tabIndicator} aria-hidden="true" />
+                  </span>
+                  <span className={styles.tabMeta}>{hasAdaptivePreview ? 'Recommended' : 'Not supplied'}</span>
+                </button>
+                <button
+                  className={styles.previewTab}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMode === 'original'}
+                  aria-controls="pwa-preview-frame"
+                  onClick={() => setPreviewMode('original')}
+                >
+                  <span className={styles.tabTopline}>
+                    <span>Original site</span>
+                    <span className={styles.tabIndicator} aria-hidden="true" />
+                  </span>
+                  <span className={styles.tabMeta}>Live URL</span>
+                </button>
+              </div>
 
-        .pwa-eyebrow {
-          margin: 0 0 .25rem;
-          color: #7dd3fc;
-          font-size: .75rem;
-          font-weight: 700;
-          letter-spacing: .12em;
-          text-transform: uppercase;
-        }
+              <div className={styles.railDivider} />
+              <dl className={styles.previewFacts}>
+                <div>
+                  <dt>Current view</dt>
+                  <dd>{activeMode === 'adaptive' ? 'Adaptive' : 'Original'}</dd>
+                </div>
+                <div>
+                  <dt>Source</dt>
+                  <dd>{activeMode === 'adaptive' ? adaptiveHost : liveHost}</dd>
+                </div>
+              </dl>
 
-        .pwa-runtime h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem); }
+              <a className={`${styles.railLink} ${styles.hoverTarget}`} href={liveUrl} target="_blank" rel="noopener noreferrer" data-pwa-hover>
+                <span>Open in a new tab</span>
+                <ArrowUpRightIcon className={styles.actionIcon} />
+              </a>
+            </aside>
 
-        .pwa-actions { display: flex; align-items: center; gap: .65rem; }
+            <div className={styles.deviceColumn} data-pwa-stage>
+              <div className={styles.browserChrome} aria-hidden="true">
+                <div className={styles.browserDots}>
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className={styles.addressBar}>
+                  <span className={styles.addressLock}>↗</span>
+                  <span>{activeMode === 'adaptive' ? 'adaptive preview' : liveHost}</span>
+                </div>
+                <span className={styles.browserMode}>LIVE / 02</span>
+              </div>
 
-        .pwa-install-button,
-        .pwa-open-link {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid #38bdf8;
-          border-radius: 999px;
-          padding: .65rem 1rem;
-          color: #e0f2fe;
-          background: #0c4a6e;
-          font: inherit;
-          font-weight: 700;
-          text-decoration: none;
-        }
+              <div className={styles.deviceFrame}>
+                <div className={styles.deviceNotch} aria-hidden="true" />
+                <div className={styles.frameViewport}>
+                  <iframe
+                    id="pwa-preview-frame"
+                    className={styles.previewFrame}
+                    title={`${displayName} — ${activeMode === 'adaptive' ? 'adaptive preview' : 'original site'}`}
+                    src={previewUrl}
+                    loading="eager"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="fullscreen; clipboard-read; clipboard-write"
+                  />
+                </div>
+                <div className={styles.deviceFooter} aria-hidden="true">
+                  <span className={styles.deviceFooterLine} />
+                  <span className={styles.deviceFooterMark}>{activeMode === 'adaptive' ? 'A' : 'O'}</span>
+                  <span className={styles.deviceFooterLine} />
+                </div>
+              </div>
 
-        .pwa-install-button { border-color: #99f6e4; background: #115e59; cursor: pointer; }
-        .pwa-install-button:disabled { cursor: not-allowed; opacity: .62; }
-        .pwa-open-link:hover, .pwa-open-link:focus-visible { background: #0369a1; }
+              <div className={styles.fallbackBar}>
+                <span><span className={styles.fallbackDot} aria-hidden="true" /> Preview connected to {activeMode === 'adaptive' ? 'adaptive route' : 'live site'}.</span>
+                <a href={liveUrl} target="_blank" rel="noopener noreferrer">
+                  Open site <ArrowUpRightIcon className={styles.actionIcon} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        .pwa-status,
-        .pwa-fallback {
-          margin: 0;
-          color: #94a3b8;
-          font-size: .9rem;
-          line-height: 1.5;
-        }
+        <footer className={styles.footer} data-pwa-enter>
+          <span>Hosted PWA / {runtimeId}</span>
+          <span>Preview stays connected to the live site.</span>
+        </footer>
 
-        .pwa-fallback a { color: #7dd3fc; }
-
-        .pwa-frame-card {
-          flex: 1;
-          min-height: min(72vh, 900px);
-          overflow: hidden;
-          border: 1px solid #334155;
-          border-radius: 1rem;
-          background: #f8fafc;
-          box-shadow: 0 1.5rem 4rem rgb(2 6 23 / 35%);
-        }
-
-        .pwa-frame {
-          display: block;
-          width: 100%;
-          height: 100%;
-          min-height: min(72vh, 900px);
-          border: 0;
-          background: white;
-        }
-
-        @media (max-width: 640px) {
-          .pwa-header { align-items: flex-start; flex-direction: column; }
-          .pwa-actions { width: 100%; }
-          .pwa-install-button, .pwa-open-link { flex: 1; text-align: center; }
-        }
-      `}</style>
-    </>
+        <noscript className={styles.noscript}>
+          Enable JavaScript to use the install controls. You can still use the live-site action when JavaScript is available.
+        </noscript>
+      </div>
+    </main>
   );
 }

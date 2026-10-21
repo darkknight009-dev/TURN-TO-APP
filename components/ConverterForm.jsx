@@ -337,7 +337,7 @@ export default function ConverterForm() {
   const iconInputError = Boolean(fieldErrors.icon);
 
   return (
-    <div className="converter-card reveal reveal-delay-two">
+    <div className="converter-card motion-reveal" data-reveal>
       <div className="converter-card-header">
         <div>
           <p className="card-kicker">Conversion request</p>

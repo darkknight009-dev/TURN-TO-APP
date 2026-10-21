@@ -1,4 +1,5 @@
 import ConverterForm from "../components/ConverterForm";
+import StudioMotion from "../components/StudioMotion";
 
 const processSteps = [
   {
@@ -29,199 +30,305 @@ function ArrowUpRight({ className = "icon" }) {
 
 export default function Home() {
   return (
-    <div className="site-shell">
-      <a className="skip-link" href="#main-content">
-        Skip to converter
-      </a>
-
-      <header className="topbar page-width" aria-label="Primary navigation">
-        <a className="wordmark" href="/" aria-label="PWA Converter home">
-          <span>pwa</span>
-          <span className="wordmark-slash">/</span>
-          <span>converter</span>
+    <StudioMotion>
+      <div className="site-shell">
+        <a className="skip-link" href="#main-content">
+          Skip to converter
         </a>
 
-        <div className="topbar-status">
-          <span className="status-pulse" aria-hidden="true" />
-          <span>conversion studio / online</span>
-          <span className="topbar-index">00—26</span>
-        </div>
-      </header>
-
-      <main id="main-content">
-        <section className="hero page-width" aria-labelledby="hero-title">
-          <div className="hero-rail" aria-hidden="true">
-            <span>01</span>
-            <span className="hero-rail-line" />
-            <span>make it installable</span>
-          </div>
-
-          <div className="hero-copy reveal reveal-delay-one">
-            <p className="eyebrow">
-              <span className="eyebrow-mark" aria-hidden="true">
-                ✳
-              </span>
-              URL to home screen
-            </p>
-            <h1 id="hero-title">
-              Give the web
-              <span className="hero-title-accent"> a place</span>
-              <br />
-              to live.
-            </h1>
-            <p className="hero-lede">
-              Wrap any public web app in a considered, installable experience.
-              One URL in, one ready-to-ship PWA out.
-            </p>
-
-            <div className="hero-actions">
-              <a className="text-link text-link-bright" href="#convert">
-                Start a conversion
-                <ArrowUpRight />
-              </a>
-              <span className="hero-caption">
-                No build setup / no design system to learn
-              </span>
-            </div>
-
-            <div className="hero-signals" aria-label="Product highlights">
-              <span>
-                <strong>01</strong> public URL
-              </span>
-              <span>
-                <strong>02</strong> app identity
-              </span>
-              <span>
-                <strong>03</strong> install-ready ZIP
-              </span>
-            </div>
-          </div>
-
-          <div
-            className="hero-art reveal reveal-delay-two"
-            aria-label="A preview of a PWA package"
-            role="img"
-          >
-            <div className="hero-art-grid" />
-            <div className="hero-art-coordinate">
-              40° 43&apos; 51&quot; N / 73° 59&apos; 08&quot; W
-            </div>
-
-            <div className="orbit orbit-large" />
-            <div className="orbit orbit-small" />
-
-            <div className="art-card art-card-back">
-              <div className="art-card-topline">
-                <span>manifest.webmanifest</span>
-                <span>JSON</span>
-              </div>
-              <div className="code-lines" aria-hidden="true">
-                <span className="code-line code-line-short" />
-                <span className="code-line code-line-wide" />
-                <span className="code-line code-line-medium" />
-                <span className="code-line code-line-short" />
-              </div>
-            </div>
-
-            <div className="art-card art-card-front">
-              <div className="art-card-topline">
-                <span>new release</span>
-                <span className="art-card-live">● live</span>
-              </div>
-              <div className="art-app-row">
-                <span className="art-app-icon">↗</span>
-                <span className="art-app-name">
-                  <strong>your-app.pwa</strong>
-                  <small>ready for the home screen</small>
-                </span>
-              </div>
-              <div className="art-card-footer">
-                <span>install link generated</span>
-                <span className="art-card-check" aria-hidden="true">
-                  ✓
-                </span>
-              </div>
-            </div>
-
-            <span className="art-sticker art-sticker-top">PUBLIC / 01</span>
-            <span className="art-sticker art-sticker-bottom">
-              DROP → INSTALL
+        <header className="topbar page-width" aria-label="Primary navigation">
+          <a className="wordmark" href="/" aria-label="PWA Converter home">
+            <span className="wordmark-mark">
+              pwa<span className="wordmark-dot">·</span>
             </span>
-          </div>
-        </section>
+            <span className="wordmark-name">converter</span>
+          </a>
 
-        <section
-          className="conversion-section page-width"
-          id="convert"
-          aria-labelledby="convert-title"
-        >
-          <div className="section-rule" aria-hidden="true">
-            <span>02</span>
-            <span className="section-rule-line" />
-            <span>the conversion desk</span>
-          </div>
+          <nav className="topbar-nav" aria-label="Utility navigation">
+            <a className="topbar-link" href="#convert">
+              Build your wrapper
+              <ArrowUpRight />
+            </a>
+            <span className="topbar-status">
+              <span className="status-pulse" aria-hidden="true" />
+              <span>studio / online</span>
+              <span className="topbar-index">00—26</span>
+            </span>
+          </nav>
+        </header>
 
-          <div className="conversion-grid">
-            <div className="conversion-intro reveal reveal-delay-one">
-              <p className="eyebrow">Build your wrapper</p>
-              <h2 id="convert-title">
-                The shortest path from
-                <span> browser tab</span> to home screen.
-              </h2>
-              <p className="conversion-description">
-                Keep the product you already built. Add a name, an optional
-                mark, and a little ceremony around the launch.
+        <main id="main-content">
+          <section className="hero page-width" aria-labelledby="hero-title">
+            <div className="hero-rail" aria-hidden="true">
+              <span>STUDIO / 001</span>
+              <span className="hero-rail-line" />
+              <span>MAKE IT INSTALLABLE</span>
+            </div>
+
+            <div className="hero-copy motion-reveal" data-reveal>
+              <div className="hero-meta">
+                <p className="eyebrow">
+                  <span className="eyebrow-index">01</span>
+                  URL <span aria-hidden="true">→</span> installable
+                </p>
+                <span className="hero-meta-note">PUBLIC WEB / ANYWHERE</span>
+              </div>
+
+              <h1 id="hero-title">
+                <span className="hero-title-line">Make the web</span>
+                <span className="hero-title-line hero-title-line-offset">
+                  <em>installable.</em>
+                </span>
+              </h1>
+
+              <p className="hero-lede">
+                Turn a live web app into a considered home-screen experience.
+                One public URL in. One launch-ready PWA out.
               </p>
 
-              <ol className="process-list">
-                {processSteps.map((step) => (
-                  <li key={step.number}>
-                    <span className="process-number">{step.number}</span>
-                    <span className="process-copy">
-                      <strong>{step.title}</strong>
-                      <span>{step.description}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <div className="hero-actions">
+                <a
+                  className="button button-primary hero-cta"
+                  data-magnetic
+                  href="#convert"
+                >
+                  Start a conversion
+                  <ArrowUpRight />
+                </a>
+                <a className="hero-inline-link" href="#how-it-works">
+                  See the system <span aria-hidden="true">↓</span>
+                </a>
+              </div>
 
-              <div className="intro-note">
-                <span className="intro-note-mark" aria-hidden="true">
-                  ✦
-                </span>
-                <p>
-                  <strong>Built for the open web.</strong> Your URL stays the
-                  source of truth; the wrapper makes it feel native.
-                </p>
+              <div className="hero-specs" aria-label="Product highlights">
+                <div>
+                  <span>01</span>
+                  <strong>URL</strong>
+                  <small>public + live</small>
+                </div>
+                <div>
+                  <span>02</span>
+                  <strong>IDENTITY</strong>
+                  <small>name + icon</small>
+                </div>
+                <div>
+                  <span>03</span>
+                  <strong>OUTPUT</strong>
+                  <small>install + ZIP</small>
+                </div>
               </div>
             </div>
 
-            <ConverterForm />
-          </div>
-        </section>
+            <div
+              className="hero-stage motion-reveal"
+              data-reveal
+              data-pointer-zone
+              aria-label="A kinetic preview of a PWA package"
+              role="img"
+            >
+              <div className="hero-stage-label">
+                <span>CONVERSION / IN MOTION</span>
+                <span>MOVE THROUGH THE FIELD</span>
+              </div>
 
-        <section
-          className="closing-section page-width"
-          aria-label="Product promise"
-        >
-          <div className="closing-rule" />
-          <p className="closing-kicker">
-            A better front door for the things you already made.
-          </p>
-          <p className="closing-statement">
-            Ship the link. Keep the momentum.
-            <span aria-hidden="true"> ↗</span>
-          </p>
-        </section>
-      </main>
+              <div className="stage-scene" aria-hidden="true">
+                <div className="stage-grid" data-pointer data-pointer-strength="10" />
+                <div className="stage-glow" data-pointer data-pointer-strength="16" />
+                <div className="stage-orbit stage-orbit-one" />
+                <div className="stage-orbit stage-orbit-two" />
 
-      <footer className="site-footer page-width">
-        <span className="footer-brand">pwa/converter</span>
-        <span>
-          built for the open web <span aria-hidden="true">·</span>{" "}
-          {new Date().getFullYear()}
-        </span>
-      </footer>
-    </div>
+                <div className="stage-orb" data-pointer data-pointer-strength="34">
+                  <span>↗</span>
+                </div>
+
+                <div
+                  className="stage-card stage-card-manifest"
+                  data-pointer
+                  data-pointer-strength="16"
+                >
+                  <div className="stage-card-chrome">
+                    <span>01 / manifest</span>
+                    <span className="stage-chip">JSON</span>
+                  </div>
+                  <div className="manifest-lines">
+                    <span className="manifest-line manifest-line-short" />
+                    <span className="manifest-line manifest-line-wide" />
+                    <span className="manifest-line manifest-line-medium" />
+                    <span className="manifest-line manifest-line-tiny" />
+                  </div>
+                  <div className="manifest-footer">
+                    <span>name</span>
+                    <strong>your-app.pwa</strong>
+                  </div>
+                </div>
+
+                <div
+                  className="stage-card stage-card-install"
+                  data-pointer
+                  data-pointer-strength="22"
+                >
+                  <div className="stage-card-chrome">
+                    <span>release 01</span>
+                    <span className="stage-live">● live</span>
+                  </div>
+                  <div className="install-badge">↗</div>
+                  <p className="install-title">home screen / ready</p>
+                  <p className="install-name">your-app.pwa</p>
+                  <div className="install-footer">
+                    <span>launch link generated</span>
+                    <span aria-hidden="true">→</span>
+                  </div>
+                </div>
+
+                <div className="stage-coordinate">
+                  40° 43&apos; 51&quot; N<br />
+                  73° 59&apos; 08&quot; W
+                </div>
+                <span className="stage-sticker stage-sticker-left">DROP / INSTALL</span>
+                <span className="stage-sticker stage-sticker-right">OPEN WEB / 01</span>
+              </div>
+
+              <div className="hero-stage-footer">
+                <span>pointer-reactive preview</span>
+                <span>scroll to compose ↘</span>
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="conversion-section page-width"
+            id="convert"
+            aria-labelledby="convert-title"
+          >
+            <div className="section-marker motion-reveal" data-reveal aria-hidden="true">
+              <span>02</span>
+              <span className="section-marker-line" />
+              <span>THE CONVERSION DESK</span>
+              <span className="section-marker-tail">KEEP THE URL / CHANGE THE FEEL</span>
+            </div>
+
+            <div className="conversion-grid">
+              <div
+                className="conversion-intro motion-reveal"
+                data-reveal
+                id="how-it-works"
+              >
+                <p className="eyebrow">
+                  <span className="eyebrow-index">02</span>
+                  Build your wrapper
+                </p>
+                <h2 id="convert-title">
+                  The shortest path from
+                  <span> browser tab</span> to home screen.
+                </h2>
+                <p className="conversion-description">
+                  Keep the product you already built. Give it a name, a mark,
+                  and a launch moment that feels like it belongs.
+                </p>
+
+                <ol className="process-list">
+                  {processSteps.map((step) => (
+                    <li key={step.number}>
+                      <span className="process-number">{step.number}</span>
+                      <span className="process-copy">
+                        <strong>{step.title}</strong>
+                        <span>{step.description}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="intro-note">
+                  <span className="intro-note-mark" aria-hidden="true">
+                    ✦
+                  </span>
+                  <p>
+                    <strong>Built for the open web.</strong> Your URL stays the
+                    source of truth; the wrapper makes it feel native.
+                  </p>
+                </div>
+              </div>
+
+              <ConverterForm />
+            </div>
+          </section>
+
+          <section
+            className="signal-section page-width motion-reveal"
+            data-reveal
+            data-scrub-panel
+            aria-labelledby="signal-title"
+          >
+            <div className="signal-panel">
+              <div className="signal-panel-header">
+                <p className="eyebrow">
+                  <span className="eyebrow-index">03</span>
+                  The output
+                </p>
+                <span>MANIFEST / READY</span>
+              </div>
+              <div className="signal-content">
+                <h2 id="signal-title">
+                  From a tab
+                  <br />
+                  <em>to a place.</em>
+                </h2>
+                <div className="signal-side">
+                  <p>
+                    A clean install route, a downloadable wrapper, and an
+                    identity that can live on the device where the work happens.
+                  </p>
+                  <div className="signal-metrics">
+                    <div>
+                      <strong>01</strong>
+                      <span>install route</span>
+                    </div>
+                    <div>
+                      <strong>02</strong>
+                      <span>manifest + icons</span>
+                    </div>
+                    <div>
+                      <strong>03</strong>
+                      <span>deployable ZIP</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="signal-marquee" aria-hidden="true">
+                <span>INSTALLABLE</span>
+                <span>RESPONSIVE</span>
+                <span>RECOGNIZABLE</span>
+                <span>READY TO SHIP</span>
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="closing-section page-width motion-reveal"
+            data-reveal
+            aria-label="Product promise"
+          >
+            <div className="closing-rule" />
+            <div className="closing-grid">
+              <p className="closing-kicker">
+                A better front door for the things you already made.
+              </p>
+              <p className="closing-statement">
+                Ship the link. Keep the momentum.
+                <span aria-hidden="true"> ↗</span>
+              </p>
+            </div>
+          </section>
+        </main>
+
+        <footer className="site-footer page-width">
+          <span className="footer-brand">pwa / converter</span>
+          <span>
+            built for the open web <span aria-hidden="true">·</span>{" "}
+            {new Date().getFullYear()}
+          </span>
+        </footer>
+      </div>
+    </StudioMotion>
   );
 }
