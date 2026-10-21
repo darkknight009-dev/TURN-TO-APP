@@ -66,11 +66,20 @@ function normalizePublicUrl(value) {
     };
   }
 
+  if (/^[/?#]/.test(trimmedValue)) {
+    return { value: "", error: "Enter a public domain, not a relative path." };
+  }
+
+  const hasExplicitScheme = /^[a-z][a-z\d+-]*:/i.test(trimmedValue);
+  const candidate = hasExplicitScheme ? trimmedValue : `https://${trimmedValue}`;
   let parsedUrl;
   try {
-    parsedUrl = new URL(trimmedValue);
+    parsedUrl = new URL(candidate);
   } catch {
-    return { value: "", error: "Use a complete URL, including https://." };
+    return {
+      value: "",
+      error: "Use a domain like your-product.com or a complete http:// or https:// URL.",
+    };
   }
 
   if (!/^https?:$/.test(parsedUrl.protocol)) {
