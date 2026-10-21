@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "check": "npm test && next build",
-    "test": "node --test lib/pwa-generator.test.cjs lib/pwa-adapter.test.cjs"
+    "test": "node --test lib/pwa-generator.test.cjs lib/pwa-adapter.test.cjs lib/pwa-store.test.cjs"
   },
   "engines": {
     "node": ">=20.9"

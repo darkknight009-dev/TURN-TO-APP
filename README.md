@@ -37,11 +37,11 @@ npm start
 - `app/` — Next.js App Router pages, API routes, and hosted PWA routes.
 - `components/ConverterForm.jsx` — client-side URL/name/icon flow and success actions.
 - `lib/pwa-generator.cjs` — validation, icon processing, manifest, service worker, and ZIP generation.
-- `lib/pwa-store.cjs` — short-lived process-local records for generated install routes.
+- `lib/pwa-store.cjs` — local JSON-backed records and resized icon buffers for generated install routes. The path defaults to `.data/pwas.json` and can be overridden with `PWA_STORE_PATH`.
 
 ## Scope and safety
 
 - The server rejects credentials, localhost, loopback, private, and reserved target URLs.
 - Uploaded icons are capped and converted to PNG through `sharp`.
 - Generated ZIPs are wrapper packages, not full offline mirrors of the target application.
-- The current install-link store is process-local and is intended for the first product slice. A production deployment should move records and icon bytes to durable storage, then add DNS-resolution checks, rate limiting, and job limits.
+- The current install-link store is intended for local and single-host use; it survives local server restarts but is not a substitute for shared storage in a serverless production deployment. Production should move records and icon bytes to a shared database/object store, then add DNS-resolution checks, rate limiting, and job limits.
