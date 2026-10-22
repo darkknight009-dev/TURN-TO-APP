@@ -122,22 +122,48 @@ export async function POST(request) {
     return errorResponse(result.message, result.status);
   }
 
-  const record = await createPwa(
-    {
-      targetUrl: validation.url,
-      appName,
-      shortName: getTextField(fields.getValue, 'shortName') || appName,
-      themeColor: normalizeHexColor(getTextField(fields.getValue, 'themeColor'), DEFAULT_THEME_COLOR),
-      backgroundColor: normalizeHexColor(
-        getTextField(fields.getValue, 'backgroundColor'),
-        DEFAULT_BACKGROUND_COLOR
-      ),
-      icon192: icons.icon192,
-      icon512: icons.icon512,
-    },
-    { allowVolatile: true },
-  );
-  const state = encodePwaState(record);
+  const hasUploadedIcon = icons.source === 'upload';
+  let record;
+  try {
+    record = await createPwa(
+      {
+        targetUrl: validation.url,
+        appName,
+        shortName: getTextField(fields.getValue, 'shortName') || appName,
+        themeColor: normalizeHexColor(getTextField(fields.getValue, 'themeColor'), DEFAULT_THEME_COLOR),
+        backgroundColor: normalizeHexColor(
+          getTextField(fields.getValue, 'backgroundColor'),
+          DEFAULT_BACKGROUND_COLOR
+        ),
+        icon192: icons.icon192,
+        icon512: icons.icon512,
+      },
+      { allowVolatile: true },
+    );
+  } catch (error) {
+    const status = error?.code?.startsWith?.('PWA_STORE_') ? 503 : 500;
+    return errorResponse(error?.message || 'Unable to persist the generated PWA.', status);
+  }
+
+  let state;
+  try {
+    state = encodePwaState(record, { includeIcons: hasUploadedIcon });
+  } catch (error) {
+    if (error?.code === 'PWA_STATE_TOO_LARGE') {
+      if (record.volatile) {
+        return errorResponse(
+          'The uploaded icon is too large to carry in a stateless install link. Configure a shared PWA store and try again.',
+          413,
+        );
+      }
+
+      // A persisted record does not need to put large binary icon data in the
+      // URL. Its hosted routes can read the PNGs back from the store.
+      state = encodePwaState(record);
+    } else {
+      return errorResponse(error?.message || 'Unable to create the install link.', 500);
+    }
+  }
 
   return jsonResponse({
     id: record.id,

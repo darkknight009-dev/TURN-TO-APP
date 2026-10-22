@@ -8,6 +8,7 @@ const ACCEPTED_ICON_TYPES = new Set([
   "image/png",
   "image/jpeg",
   "image/webp",
+  "image/gif",
   "image/svg+xml",
 ]);
 
@@ -203,7 +204,7 @@ export default function ConverterForm() {
       setIconPreview("");
       setFieldErrors((current) => ({
         ...current,
-        icon: "Choose a PNG, JPG, WebP, or SVG image.",
+        icon: "Choose a PNG, JPG, WebP, GIF, or SVG image.",
       }));
       return;
     }
@@ -240,7 +241,7 @@ export default function ConverterForm() {
       icon.size
     ) {
       if (!ACCEPTED_ICON_TYPES.has(icon.type))
-        errors.icon = "Choose a PNG, JPG, WebP, or SVG image.";
+        errors.icon = "Choose a PNG, JPG, WebP, GIF, or SVG image.";
       else if (icon.size > MAX_ICON_SIZE)
         errors.icon = "Keep the app icon under 5 MB.";
     }
@@ -522,7 +523,7 @@ export default function ConverterForm() {
                 id="app-icon"
                 name="icon"
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                 disabled={isLoading}
                 aria-invalid={iconInputError}
                 aria-describedby="app-icon-hint app-icon-error"
@@ -538,7 +539,7 @@ export default function ConverterForm() {
                     />
                     <span>
                       <strong>Replace the icon</strong>
-                      <small>PNG, JPG, WebP, or SVG / 5 MB max</small>
+                      <small>PNG, JPG, WebP, GIF, or SVG / 5 MB max</small>
                     </span>
                   </>
                 ) : (
@@ -548,7 +549,7 @@ export default function ConverterForm() {
                     </span>
                     <span>
                       <strong>Drop an icon or browse</strong>
-                      <small>PNG, JPG, WebP, or SVG / 5 MB max</small>
+                      <small>PNG, JPG, WebP, GIF, or SVG / 5 MB max</small>
                     </span>
                   </>
                 )}
@@ -559,7 +560,8 @@ export default function ConverterForm() {
             </div>
             <p className="field-hint" id="app-icon-hint">
               Optional — bring your own mark, or let the generator create a
-              clean default.
+              clean default. Animated GIFs use their first frame for the PWA
+              icon.
             </p>
             {fieldErrors.icon ? (
               <p className="field-error" id="app-icon-error" role="alert">
