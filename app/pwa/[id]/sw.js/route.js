@@ -25,8 +25,8 @@ export async function GET(request, { params }) {
   const resolved = await resolvePwaRecord(id, getStateFromRequest(request), getPwa);
   if (!resolved) return jsonResponse({ error: 'PWA not found.', message: 'PWA not found.' }, 404);
 
-  const scope = `/pwa/${encodeURIComponent(String(id))}/`;
-  return new Response(buildHostedServiceWorker(id, { state: resolved.state, persisted: resolved.persisted }), {
+  const scope = `/pwa/${encodeURIComponent(String(id))}`;
+  return new Response(buildHostedServiceWorker(id, { state: resolved.state, targetUrl: resolved.record.targetUrl, appName: resolved.record.appName }), {
     status: 200,
     headers: {
       'Cache-Control': 'no-store',

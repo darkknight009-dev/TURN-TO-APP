@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "check": "npm test && next build",
-    "test": "node --test lib/pwa-generator.test.cjs lib/pwa-adapter.test.cjs lib/pwa-store.test.cjs lib/pwa-link.test.cjs"
+    "smoke": "node lib/pwa-smoke.cjs",
+    "test": "node --test lib/pwa-generator.test.cjs lib/pwa-adapter.test.cjs lib/pwa-store.test.cjs lib/pwa-link.test.cjs lib/pwa-runtime.test.cjs"
   },
   "engines": {
     "node": ">=20.9"

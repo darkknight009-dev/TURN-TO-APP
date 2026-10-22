@@ -32,6 +32,9 @@ export async function GET(request, { params }) {
   let record = resolved.record;
 
   if (!record.icon192 || !record.icon512) {
+    if (record.iconSource === 'upload') {
+      return jsonResponse({ error: 'The uploaded icon is unavailable. Restore the record store or regenerate this app before downloading.' }, 503);
+    }
     try {
       const icons = await createIconSet(null);
       record = { ...record, icon192: icons.icon192, icon512: icons.icon512 };

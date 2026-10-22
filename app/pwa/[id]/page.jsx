@@ -29,6 +29,7 @@ export async function generateMetadata({ params, searchParams }) {
     manifest: withPwaState(`${basePath}/manifest.webmanifest`, state),
     icons: {
       icon: withPwaState(`${basePath}/icon.png`, state, { size: 192 }),
+      apple: withPwaState(`${basePath}/icon.png`, state, { size: 192 }),
     },
   };
 }
@@ -59,6 +60,8 @@ export default async function PwaPage({ params, searchParams }) {
         appName={resolved.record.appName}
         targetUrl={resolved.record.targetUrl}
         state={state}
+        animatedIcon={Boolean(resolved.record.iconGif)}
+        iconUnavailable={resolved.record.iconSource === 'upload' && (!resolved.record.icon192 || !resolved.record.icon512)}
         adaptiveUrl={resolved.persisted ? withPwaState(`${basePath}/adaptive`, state) : ''}
       />
     </>

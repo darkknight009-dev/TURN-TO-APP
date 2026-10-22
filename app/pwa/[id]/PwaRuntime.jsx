@@ -51,23 +51,27 @@ function getHost(value) {
   }
 }
 
-export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl }) {
+export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl, animatedIcon = false, iconUnavailable = false }) {
   const displayName = String(appName || 'Hosted app');
   const liveUrl = targetUrl || 'about:blank';
   const adaptiveSource = adaptiveUrl || '';
   const hasAdaptivePreview = Boolean(adaptiveSource);
   const basePath = useMemo(() => `/pwa/${encodeURIComponent(String(id || ''))}`, [id]);
-  const scopePath = `${basePath}/`;
+  const scopePath = basePath;
   const iconUrl = withState(`${basePath}/icon.png`, state, { size: 192 });
+  const animatedIconUrl = animatedIcon ? withState(`${basePath}/icon.png`, state, { animated: 1 }) : '';
   const liveHost = useMemo(() => getHost(targetUrl), [targetUrl]);
   const adaptiveHost = useMemo(() => getHost(adaptiveSource), [adaptiveSource]);
   const appInitial = displayName.trim().slice(0, 1).toUpperCase() || 'A';
   const runtimeId = String(id || 'runtime').slice(0, 22);
   const rootRef = useRef(null);
+  const promptInFlight = useRef(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [installStatus, setInstallStatus] = useState('checking');
   const [installHintVisible, setInstallHintVisible] = useState(false);
+  const [standaloneMode, setStandaloneMode] = useState(false);
   const [runtimeMessage, setRuntimeMessage] = useState('');
+  const [prompting, setPrompting] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => (hasAdaptivePreview ? 'adaptive' : 'original'));
 
   useEffect(() => {
@@ -80,15 +84,31 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
     setDeferredPrompt(null);
     setInstallStatus('checking');
     setInstallHintVisible(false);
+    setStandaloneMode(false);
     setRuntimeMessage('');
 
     const isStandalone =
       window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-    if (isStandalone) setInstallStatus('installed');
+    if (isStandalone) {
+      setStandaloneMode(true);
+      setInstallStatus('installed');
+      setInstallHintVisible(true);
+      // Launch the real URL at top level, not inside an optional iframe/proxy
+      // that the target site may block or that cannot carry its login cookies.
+      window.location.replace(liveUrl);
+    }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(withState(`${basePath}/sw.js`, state), { scope: scopePath }).catch(() => {
+      navigator.serviceWorker.register(withState(`${basePath}/sw.js`, state), { scope: scopePath, updateViaCache: 'none' }).then(async () => {
+        // Retire only this app's old slash-scoped worker, which otherwise wins
+        // for its assets and can keep serving a stale generic icon.
+        if (navigator.serviceWorker.getRegistrations) {
+          const oldScope = new URL(`${scopePath}/`, window.location.origin).href;
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.filter((registration) => registration.scope === oldScope).map((registration) => registration.unregister()));
+        }
+      }).catch(() => {
         if (!cancelled) {
           setRuntimeMessage('Install metadata could not be registered here, but preview and live-site access are still available.');
         }
@@ -109,7 +129,7 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
       setInstallStatus('installed');
-      setInstallHintVisible(false);
+      setInstallHintVisible(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -125,7 +145,7 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [basePath, scopePath, state]);
+  }, [basePath, scopePath, state, liveUrl]);
 
   useLayoutEffect(() => {
     const scope = rootRef.current;
@@ -194,7 +214,16 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
   }, []);
 
   async function handleInstall() {
-    if (installStatus === 'installed') return;
+    if (installStatus === 'installed' || installStatus === 'requested') {
+      window.location.assign(liveUrl);
+      return;
+    }
+
+    if (promptInFlight.current) return;
+    if (iconUnavailable) {
+      setInstallHintVisible(true);
+      return;
+    }
 
     if (!deferredPrompt) {
       setInstallStatus('unavailable');
@@ -203,16 +232,22 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
     }
 
     const promptEvent = deferredPrompt;
+    promptInFlight.current = true;
+    setPrompting(true);
     setDeferredPrompt(null);
     try {
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice;
       const accepted = choice?.outcome === 'accepted';
-      setInstallStatus(accepted ? 'installed' : 'unavailable');
-      setInstallHintVisible(!accepted);
-    } catch {
-      setInstallStatus('unavailable');
+      // Acceptance is not installation completion; appinstalled confirms that.
+      setInstallStatus((current) => current === 'installed' ? current : accepted ? 'requested' : 'unavailable');
       setInstallHintVisible(true);
+    } catch {
+      setInstallStatus((current) => current === 'installed' ? current : 'unavailable');
+      setInstallHintVisible(true);
+    } finally {
+      promptInFlight.current = false;
+      setPrompting(false);
     }
   }
 
@@ -231,11 +266,19 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
             detail: 'This browser can add the hosted experience to your app library or home screen.',
             short: 'Install prompt ready',
           }
+        : installStatus === 'requested'
+          ? {
+              title: 'Install request accepted',
+              detail: 'Your browser is completing installation. You can open the original site now.',
+              short: 'Waiting for installation confirmation',
+            }
         : installStatus === 'installed'
           ? {
-              title: 'Already installed',
-              detail: 'You are viewing the installed hosted experience in its app window.',
-              short: 'Installed in this browser',
+              title: standaloneMode ? 'Hosted app is open' : 'Already installed',
+              detail: standaloneMode
+                ? 'Opening the original site directly. Use Open app below if it does not open automatically.'
+                : 'Installation completed. Open app always opens the original site; use your Dock or browser app list for the installed window.',
+              short: standaloneMode ? 'Running in standalone mode' : 'Installed in this browser',
             }
           : {
               title: 'Use your browser menu to install',
@@ -245,8 +288,8 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
   const installButtonLabel =
     installStatus === 'available'
       ? 'Install app'
-      : installStatus === 'installed'
-        ? 'Installed'
+      : installStatus === 'installed' || installStatus === 'requested'
+        ? 'Open app'
         : 'Install options';
   const installProgress =
     installStatus === 'checking' ? 42 : installStatus === 'available' ? 76 : installStatus === 'installed' ? 100 : 24;
@@ -289,7 +332,13 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
               <div className={styles.identityRow}>
                 <div className={styles.appIcon} aria-hidden="true">
                   <span className={styles.appIconFallback}>{appInitial}</span>
-                  <img src={iconUrl} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />
+                  <picture>
+                    {animatedIconUrl && <source srcSet={animatedIconUrl} type="image/gif" media="(prefers-reduced-motion: no-preference)" />}
+                    <img key={iconUrl} src={iconUrl} alt="" onError={(event) => {
+                      event.currentTarget.hidden = true;
+                      setRuntimeMessage('The saved icon could not be loaded. Restore the record store or regenerate this app with your image.');
+                    }} />
+                  </picture>
                 </div>
                 <div className={styles.identityCopy}>
                   <p className={styles.identityLabel}>A considered way in</p>
@@ -305,13 +354,13 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
                   className={`${styles.primaryAction} ${styles.hoverTarget}`}
                   type="button"
                   onClick={handleInstall}
-                  disabled={installStatus === 'installed'}
+                  disabled={prompting}
                   aria-describedby="install-status"
                   data-pwa-hover
                 >
-                  {installStatus === 'installed' ? <CheckIcon className={styles.actionIcon} /> : <InstallIcon className={styles.actionIcon} />}
-                  <span>{installButtonLabel}</span>
-                  {installStatus === 'available' && <span className={styles.actionArrow}>↗</span>}
+                  {installStatus === 'installed' ? <ArrowUpRightIcon className={styles.actionIcon} /> : <InstallIcon className={styles.actionIcon} />}
+                  <span>{prompting ? 'Waiting for browser' : installButtonLabel}</span>
+                  {installStatus !== 'checking' && <span className={styles.actionArrow}>↗</span>}
                 </button>
                 <a
                   className={`${styles.secondaryAction} ${styles.hoverTarget}`}
@@ -362,9 +411,12 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
               </div>
 
               {runtimeMessage && <p className={styles.runtimeMessage}>{runtimeMessage}</p>}
-              {installHintVisible && installStatus !== 'installed' && (
+              {iconUnavailable && <p className={styles.runtimeMessage} role="alert">Your uploaded icon is unavailable. Restore shared storage or regenerate this app with your image before installing. The original site can still be opened.</p>}
+              {installHintVisible && (
                 <p className={styles.installHint}>
-                  Open the browser menu and choose its install or home-screen option when it is available.
+                  {installStatus === 'installed'
+                    ? 'Open this app as often as you like. To reinstall the same app, uninstall it in Brave’s app list first, then reload this install page. To keep a separate copy, generate another package.'
+                    : 'Use the browser’s install option when available. If already installed, open it from your Dock or browser app list. After uninstalling, reload this page to install again.'}
                 </p>
               )}
             </aside>
@@ -477,7 +529,7 @@ export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl 
               </div>
 
               <div className={styles.fallbackBar}>
-                <span><span className={styles.fallbackDot} aria-hidden="true" /> Preview connected to {activeMode === 'adaptive' ? 'adaptive route' : 'live site'}.</span>
+                <span><span className={styles.fallbackDot} aria-hidden="true" /> Preview is optional. If blank or blocked, open the original site.</span>
                 <a href={liveUrl} target="_blank" rel="noopener noreferrer">
                   Open site <ArrowUpRightIcon className={styles.actionIcon} />
                 </a>

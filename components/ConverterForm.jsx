@@ -11,6 +11,10 @@ const ACCEPTED_ICON_TYPES = new Set([
   "image/gif",
   "image/svg+xml",
 ]);
+const ICON_FORMAT_LABEL = "PNG, JPG, WebP, GIF, or SVG";
+const ICON_TYPE_ERROR = `Choose a ${ICON_FORMAT_LABEL} image.`;
+const GIF_PWA_NOTE =
+  "GIFs animate on the install page. Installed PWA icons use a static first frame.";
 
 function ArrowUpRight({ className = "icon" }) {
   return (
@@ -204,7 +208,7 @@ export default function ConverterForm() {
       setIconPreview("");
       setFieldErrors((current) => ({
         ...current,
-        icon: "Choose a PNG, JPG, WebP, GIF, or SVG image.",
+        icon: ICON_TYPE_ERROR,
       }));
       return;
     }
@@ -241,7 +245,7 @@ export default function ConverterForm() {
       icon.size
     ) {
       if (!ACCEPTED_ICON_TYPES.has(icon.type))
-        errors.icon = "Choose a PNG, JPG, WebP, GIF, or SVG image.";
+        errors.icon = ICON_TYPE_ERROR;
       else if (icon.size > MAX_ICON_SIZE)
         errors.icon = "Keep the app icon under 5 MB.";
     }
@@ -539,7 +543,7 @@ export default function ConverterForm() {
                     />
                     <span>
                       <strong>Replace the icon</strong>
-                      <small>PNG, JPG, WebP, GIF, or SVG / 5 MB max</small>
+                      <small>{ICON_FORMAT_LABEL} / 5 MB max</small>
                     </span>
                   </>
                 ) : (
@@ -549,7 +553,7 @@ export default function ConverterForm() {
                     </span>
                     <span>
                       <strong>Drop an icon or browse</strong>
-                      <small>PNG, JPG, WebP, GIF, or SVG / 5 MB max</small>
+                      <small>{ICON_FORMAT_LABEL} / 5 MB max</small>
                     </span>
                   </>
                 )}
@@ -559,9 +563,8 @@ export default function ConverterForm() {
               </label>
             </div>
             <p className="field-hint" id="app-icon-hint">
-              Optional — bring your own mark, or let the generator create a
-              clean default. Animated GIFs use their first frame for the PWA
-              icon.
+              Optional — bring your own mark, or let the generator create a clean
+              default. {GIF_PWA_NOTE}
             </p>
             {fieldErrors.icon ? (
               <p className="field-error" id="app-icon-error" role="alert">

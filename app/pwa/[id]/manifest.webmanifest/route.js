@@ -23,6 +23,9 @@ export async function GET(request, { params }) {
   const resolvedParams = await params;
   const resolved = await resolvePwaRecord(resolvedParams?.id, getStateFromRequest(request), getPwa);
   if (!resolved) return jsonResponse({ error: 'PWA not found.', message: 'PWA not found.' }, 404);
+  if (resolved.record.iconSource === 'upload' && (!resolved.record.icon192 || !resolved.record.icon512)) {
+    return jsonResponse({ error: 'Uploaded icons are unavailable. Restore the record store before installing this app.' }, 503);
+  }
 
   return new Response(`${JSON.stringify(buildManifest(resolved.record, { hosted: true, hostedState: resolved.state }), null, 2)}\n`, {
     status: 200,

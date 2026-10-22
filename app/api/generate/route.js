@@ -106,6 +106,13 @@ export async function POST(request) {
   if (!nameValue) return errorResponse('Enter an app name.');
 
   const appName = sanitizeAppName(nameValue) || deriveAppName(validation.url);
+  // Validate the portable metadata budget before processing or saving uploads.
+  try {
+    encodePwaState({ id: '0'.repeat(24), targetUrl: validation.url, appName, shortName: getTextField(fields.getValue, 'shortName') || appName, iconSource: 'upload' });
+    buildPublicPwaUrl(request, '/pwa/configuration-check');
+  } catch (error) {
+    return errorResponse(error?.message || 'Unable to create an install link.', error?.code === 'PWA_STATE_TOO_LARGE' ? 413 : 500);
+  }
   const iconValue = fields.icon;
   let iconFile = null;
 
@@ -122,7 +129,6 @@ export async function POST(request) {
     return errorResponse(result.message, result.status);
   }
 
-  const hasUploadedIcon = icons.source === 'upload';
   let record;
   try {
     record = await createPwa(
@@ -137,8 +143,12 @@ export async function POST(request) {
         ),
         icon192: icons.icon192,
         icon512: icons.icon512,
+        iconGif: icons.iconGif,
+        iconSource: icons.source,
       },
-      { allowVolatile: true },
+      // Uploaded artwork cannot be reconstructed from short metadata-only URLs.
+      // Never report success if it wasn't saved durably.
+      { allowVolatile: !iconFile },
     );
   } catch (error) {
     const status = error?.code?.startsWith?.('PWA_STORE_') ? 503 : 500;
@@ -147,22 +157,9 @@ export async function POST(request) {
 
   let state;
   try {
-    state = encodePwaState(record, { includeIcons: hasUploadedIcon });
+    state = encodePwaState(record);
   } catch (error) {
-    if (error?.code === 'PWA_STATE_TOO_LARGE') {
-      if (record.volatile) {
-        return errorResponse(
-          'The uploaded icon is too large to carry in a stateless install link. Configure a shared PWA store and try again.',
-          413,
-        );
-      }
-
-      // A persisted record does not need to put large binary icon data in the
-      // URL. Its hosted routes can read the PNGs back from the store.
-      state = encodePwaState(record);
-    } else {
-      return errorResponse(error?.message || 'Unable to create the install link.', 500);
-    }
+    return errorResponse(error?.message || 'Unable to create the install link.', 500);
   }
 
   return jsonResponse({
