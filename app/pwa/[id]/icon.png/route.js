@@ -1,5 +1,9 @@
+import pwaGenerator from '../../../../lib/pwa-generator.cjs';
+import pwaLink from '../../../../lib/pwa-link.cjs';
 import pwaStore from '../../../../lib/pwa-store.cjs';
 
+const { createFallbackIcon } = pwaGenerator;
+const { getStateFromRequest, resolvePwaRecord } = pwaLink;
 const { getPwa } = pwaStore;
 
 export const runtime = 'nodejs';
@@ -17,19 +21,20 @@ function jsonResponse(payload, status = 200) {
 
 export async function GET(request, { params }) {
   const resolvedParams = await params;
-  const record = getPwa(resolvedParams?.id);
-  if (!record) return jsonResponse({ error: 'PWA not found.', message: 'PWA not found.' }, 404);
+  const resolved = await resolvePwaRecord(resolvedParams?.id, getStateFromRequest(request), getPwa);
+  if (!resolved) return jsonResponse({ error: 'PWA not found.', message: 'PWA not found.' }, 404);
 
   const requestUrl = new URL(request.url);
   const requestedSize = requestUrl.searchParams.get('size');
-  const icon = requestedSize === '512' || requestedSize === '512x512' ? record.icon512 : record.icon192;
-  if (!icon) return jsonResponse({ error: 'PWA icon is unavailable.', message: 'PWA icon is unavailable.' }, 404);
+  const size = requestedSize === '512' || requestedSize === '512x512' ? 512 : 192;
+  const icon = size === 512 ? resolved.record.icon512 : resolved.record.icon192;
+  const responseIcon = icon || await createFallbackIcon(size);
 
-  return new Response(icon, {
+  return new Response(responseIcon, {
     status: 200,
     headers: {
       'Cache-Control': 'no-store',
-      'Content-Length': String(icon.byteLength),
+      'Content-Length': String(responseIcon.byteLength),
       'Content-Type': 'image/png',
     },
   });

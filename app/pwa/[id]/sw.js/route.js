@@ -1,7 +1,9 @@
 import pwaGenerator from '../../../../lib/pwa-generator.cjs';
+import pwaLink from '../../../../lib/pwa-link.cjs';
 import pwaStore from '../../../../lib/pwa-store.cjs';
 
 const { buildHostedServiceWorker } = pwaGenerator;
+const { getStateFromRequest, resolvePwaRecord } = pwaLink;
 const { getPwa } = pwaStore;
 
 export const runtime = 'nodejs';
@@ -17,13 +19,14 @@ function jsonResponse(payload, status = 200) {
   });
 }
 
-export async function GET(_request, { params }) {
+export async function GET(request, { params }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
-  if (!getPwa(id)) return jsonResponse({ error: 'PWA not found.', message: 'PWA not found.' }, 404);
+  const resolved = await resolvePwaRecord(id, getStateFromRequest(request), getPwa);
+  if (!resolved) return jsonResponse({ error: 'PWA not found.', message: 'PWA not found.' }, 404);
 
   const scope = `/pwa/${encodeURIComponent(String(id))}/`;
-  return new Response(buildHostedServiceWorker(id), {
+  return new Response(buildHostedServiceWorker(id, { state: resolved.state, persisted: resolved.persisted }), {
     status: 200,
     headers: {
       'Cache-Control': 'no-store',

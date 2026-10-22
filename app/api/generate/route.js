@@ -1,4 +1,5 @@
 import pwaGenerator from '../../../lib/pwa-generator.cjs';
+import pwaLink from '../../../lib/pwa-link.cjs';
 import pwaStore from '../../../lib/pwa-store.cjs';
 
 const {
@@ -10,6 +11,7 @@ const {
   sanitizeAppName,
   validateTargetUrl,
 } = pwaGenerator;
+const { buildPublicPwaUrl, encodePwaState } = pwaLink;
 const { createPwa } = pwaStore;
 
 export const runtime = 'nodejs';
@@ -120,23 +122,27 @@ export async function POST(request) {
     return errorResponse(result.message, result.status);
   }
 
-  const record = createPwa({
-    targetUrl: validation.url,
-    appName,
-    shortName: getTextField(fields.getValue, 'shortName') || appName,
-    themeColor: normalizeHexColor(getTextField(fields.getValue, 'themeColor'), DEFAULT_THEME_COLOR),
-    backgroundColor: normalizeHexColor(
-      getTextField(fields.getValue, 'backgroundColor'),
-      DEFAULT_BACKGROUND_COLOR
-    ),
-    icon192: icons.icon192,
-    icon512: icons.icon512,
-  });
+  const record = await createPwa(
+    {
+      targetUrl: validation.url,
+      appName,
+      shortName: getTextField(fields.getValue, 'shortName') || appName,
+      themeColor: normalizeHexColor(getTextField(fields.getValue, 'themeColor'), DEFAULT_THEME_COLOR),
+      backgroundColor: normalizeHexColor(
+        getTextField(fields.getValue, 'backgroundColor'),
+        DEFAULT_BACKGROUND_COLOR
+      ),
+      icon192: icons.icon192,
+      icon512: icons.icon512,
+    },
+    { allowVolatile: true },
+  );
+  const state = encodePwaState(record);
 
   return jsonResponse({
     id: record.id,
     appName: record.appName,
-    installUrl: `/pwa/${record.id}`,
-    downloadUrl: `/api/pwa/${record.id}/download`,
+    installUrl: buildPublicPwaUrl(request, `/pwa/${encodeURIComponent(record.id)}`, state),
+    downloadUrl: buildPublicPwaUrl(request, `/api/pwa/${encodeURIComponent(record.id)}/download`, state),
   });
 }

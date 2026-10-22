@@ -1,5 +1,6 @@
 import pwaAdapter from '../../../../lib/pwa-adapter.cjs';
 import pwaGenerator from '../../../../lib/pwa-generator.cjs';
+import pwaLink from '../../../../lib/pwa-link.cjs';
 import pwaStore from '../../../../lib/pwa-store.cjs';
 
 const {
@@ -13,6 +14,7 @@ const {
   resolveAdapterTarget,
 } = pwaAdapter;
 const { validateTargetUrl } = pwaGenerator;
+const { getStateFromRequest, resolvePwaRecord } = pwaLink;
 const { getPwa } = pwaStore;
 
 export const runtime = 'nodejs';
@@ -253,13 +255,23 @@ async function getRouteId(params) {
 
 export async function GET(request, { params }) {
   const id = await getRouteId(params);
-  const record = getPwa(id);
-  if (!record) {
+  const resolved = await resolvePwaRecord(id, getStateFromRequest(request), getPwa);
+  if (!resolved) {
     return htmlResponse(
       fallbackDocument('PWA preview not found', 'The generated PWA record is unavailable or has expired.'),
       404,
     );
   }
+  if (!resolved.persisted) {
+    return htmlResponse(
+      fallbackDocument(
+        'Adaptive preview unavailable',
+        'The hosted page is available, but its responsive server preview needs the generated record store.',
+      ),
+      503,
+    );
+  }
+  const record = resolved.record;
 
   const requestUrl = new URL(request.url);
   const requestedUrl = requestUrl.searchParams.get('url');

@@ -37,11 +37,13 @@ npm start
 - `app/` — Next.js App Router pages, API routes, and hosted PWA routes.
 - `components/ConverterForm.jsx` — client-side URL/name/icon flow and success actions.
 - `lib/pwa-generator.cjs` — validation, icon processing, manifest, service worker, and ZIP generation.
-- `lib/pwa-store.cjs` — local JSON-backed records and resized icon buffers for generated install routes. The path defaults to `.data/pwas.json` and can be overridden with `PWA_STORE_PATH`.
+- `lib/pwa-store.cjs` — shared MongoDB records when `MONGODB_URI` is configured, with a local JSON fallback at `.data/pwas.json` for local/single-host use.
+- `lib/pwa-link.cjs` — canonical public install/download URLs plus a portable state fallback so a generated install link can still resolve when a deployment instance cannot read the store.
 
 ## Scope and safety
 
-- The server rejects credentials, localhost, loopback, private, and reserved target URLs.
 - Uploaded icons are capped and converted to PNG through `sharp`.
 - Generated ZIPs are wrapper packages, not full offline mirrors of the target application.
-- The current install-link store is intended for local and single-host use; it survives local server restarts but is not a substitute for shared storage in a serverless production deployment. Production should move records and icon bytes to a shared database/object store, then add DNS-resolution checks, rate limiting, and job limits.
+- Generated install/download responses use absolute URLs. Set `PUBLIC_APP_URL` when the app is behind a reverse proxy or its request host is not the public host, for example `https://converter.example`.
+- Configure `MONGODB_URI` (and optionally `MONGODB_DB` / `MONGODB_COLLECTION`) for shared multi-instance/serverless storage. Without it, the app uses `.data/pwas.json` locally and embeds the essential app metadata in the generated link as a fallback; uploaded icons use the generated fallback icon if the shared store is unavailable.
+- The server rejects credentials, localhost, loopback, private, and reserved target URLs. Production should also add DNS-resolution checks, rate limiting, and job limits.

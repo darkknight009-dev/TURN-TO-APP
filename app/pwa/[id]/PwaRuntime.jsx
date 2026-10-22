@@ -5,6 +5,15 @@ import { gsap } from 'gsap';
 
 import styles from './PwaRuntime.module.css';
 
+function withState(pathname, state, params = {}) {
+  const url = new URL(pathname, 'https://pwa-runtime.invalid');
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+  }
+  if (state) url.searchParams.set('state', String(state));
+  return `${url.pathname}${url.search}`;
+}
+
 function ArrowUpRightIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 18 18" aria-hidden="true">
@@ -42,14 +51,14 @@ function getHost(value) {
   }
 }
 
-export default function PwaRuntime({ id, appName, targetUrl, adaptiveUrl }) {
+export default function PwaRuntime({ id, appName, targetUrl, state, adaptiveUrl }) {
   const displayName = String(appName || 'Hosted app');
   const liveUrl = targetUrl || 'about:blank';
   const adaptiveSource = adaptiveUrl || '';
   const hasAdaptivePreview = Boolean(adaptiveSource);
   const basePath = useMemo(() => `/pwa/${encodeURIComponent(String(id || ''))}`, [id]);
   const scopePath = `${basePath}/`;
-  const iconUrl = `${basePath}/icon.png?size=192`;
+  const iconUrl = withState(`${basePath}/icon.png`, state, { size: 192 });
   const liveHost = useMemo(() => getHost(targetUrl), [targetUrl]);
   const adaptiveHost = useMemo(() => getHost(adaptiveSource), [adaptiveSource]);
   const appInitial = displayName.trim().slice(0, 1).toUpperCase() || 'A';
@@ -79,7 +88,7 @@ export default function PwaRuntime({ id, appName, targetUrl, adaptiveUrl }) {
     if (isStandalone) setInstallStatus('installed');
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(`${basePath}/sw.js`, { scope: scopePath }).catch(() => {
+      navigator.serviceWorker.register(withState(`${basePath}/sw.js`, state), { scope: scopePath }).catch(() => {
         if (!cancelled) {
           setRuntimeMessage('Install metadata could not be registered here, but preview and live-site access are still available.');
         }
@@ -116,7 +125,7 @@ export default function PwaRuntime({ id, appName, targetUrl, adaptiveUrl }) {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [basePath, scopePath]);
+  }, [basePath, scopePath, state]);
 
   useLayoutEffect(() => {
     const scope = rootRef.current;

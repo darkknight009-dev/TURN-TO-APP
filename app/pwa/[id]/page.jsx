@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 
+import pwaLink from '../../../lib/pwa-link.cjs';
 import pwaStore from '../../../lib/pwa-store.cjs';
 import PwaRuntime from './PwaRuntime.jsx';
 
+const { getStateFromSearchParams, resolvePwaRecord, withPwaState } = pwaLink;
 const { getPwa } = pwaStore;
 
 export const runtime = 'nodejs';
@@ -13,45 +15,51 @@ async function resolveId(params) {
   return resolvedParams?.id;
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const id = await resolveId(params);
-  const record = getPwa(id);
-  if (!record) return { title: 'PWA not found' };
+  const resolvedSearchParams = (await searchParams) || {};
+  const resolved = await resolvePwaRecord(id, getStateFromSearchParams(resolvedSearchParams), getPwa);
+  if (!resolved) return { title: 'PWA not found' };
 
   const basePath = `/pwa/${encodeURIComponent(String(id))}`;
+  const state = resolved.state;
   return {
-    title: record.appName,
-    description: `Installable wrapper for ${record.targetUrl}`,
-    manifest: `${basePath}/manifest.webmanifest`,
+    title: resolved.record.appName,
+    description: `Installable wrapper for ${resolved.record.targetUrl}`,
+    manifest: withPwaState(`${basePath}/manifest.webmanifest`, state),
     icons: {
-      icon: `${basePath}/icon.png?size=192`,
+      icon: withPwaState(`${basePath}/icon.png`, state, { size: 192 }),
     },
   };
 }
 
-export async function generateViewport({ params }) {
+export async function generateViewport({ params, searchParams }) {
   const id = await resolveId(params);
-  const record = getPwa(id);
+  const resolvedSearchParams = (await searchParams) || {};
+  const resolved = await resolvePwaRecord(id, getStateFromSearchParams(resolvedSearchParams), getPwa);
   return {
-    themeColor: record?.themeColor || '#6757D9',
+    themeColor: resolved?.record.themeColor || '#6757D9',
   };
 }
 
-export default async function PwaPage({ params }) {
+export default async function PwaPage({ params, searchParams }) {
   const id = await resolveId(params);
-  const record = getPwa(id);
-  if (!record) notFound();
+  const resolvedSearchParams = (await searchParams) || {};
+  const resolved = await resolvePwaRecord(id, getStateFromSearchParams(resolvedSearchParams), getPwa);
+  if (!resolved) notFound();
 
   const basePath = `/pwa/${encodeURIComponent(String(id))}`;
+  const state = resolved.state;
   return (
     <>
-      <link rel="manifest" href={`${basePath}/manifest.webmanifest`} />
-      <link rel="icon" href={`${basePath}/icon.png?size=192`} type="image/png" />
+      <link rel="manifest" href={withPwaState(`${basePath}/manifest.webmanifest`, state)} />
+      <link rel="icon" href={withPwaState(`${basePath}/icon.png`, state, { size: 192 })} type="image/png" />
       <PwaRuntime
-        id={record.id}
-        appName={record.appName}
-        targetUrl={record.targetUrl}
-        adaptiveUrl={`${basePath}/adaptive`}
+        id={resolved.record.id}
+        appName={resolved.record.appName}
+        targetUrl={resolved.record.targetUrl}
+        state={state}
+        adaptiveUrl={resolved.persisted ? withPwaState(`${basePath}/adaptive`, state) : ''}
       />
     </>
   );
