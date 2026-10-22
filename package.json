@@ -13,7 +13,7 @@
     "test": "node --test lib/pwa-generator.test.cjs lib/pwa-adapter.test.cjs lib/pwa-store.test.cjs lib/pwa-link.test.cjs lib/pwa-runtime.test.cjs"
   },
   "engines": {
-    "node": ">=20.9"
+    "node": ">=20.19.0"
   },
   "dependencies": {
     "gsap": "^3.15.0",
